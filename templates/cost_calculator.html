@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>旅行费用计算器</title>
+    <style>
+        * {margin: 0; padding: 0; box-sizing: border-box;}
+        body {font-family: "Microsoft YaHei", sans-serif; padding: 20px;}
+        .container {width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);}
+        h1 {color: #2c3e50; font-size: 24px; margin-bottom: 30px; text-align: center;}
+        .form-group {margin-bottom: 25px;}
+        .form-group label {display: block; margin-bottom: 8px; color: #34495e; font-size: 14px; font-weight: 500;}
+        .form-group input {width: 100%; padding: 12px 15px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;}
+        .form-group input:focus {outline: none; border-color: #2196f3; box-shadow: 0 0 0 2px rgba(33,150,243,0.2);}
+        .error {color: #e74c3c; font-size: 12px; margin-top: 5px; display: none;}
+        #calc-btn {width: 100%; padding: 14px; background-color: #2196f3; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; transition: background 0.3s;}
+        #calc-btn:hover {background-color: #1976d2;}
+        .result {margin-top: 30px;}
+        .result h2 {color: #2c3e50; font-size: 18px; margin-bottom: 20px;}
+        .result-card {background-color: #f8f9fa; border-radius: 8px; padding: 25px; margin-bottom: 20px;}
+        .cost-item {display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 14px;}
+        .cost-item span:first-child {color: #34495e;}
+        .cost-item span:last-child {color: #2196f3; font-weight: 500;}
+        .cost-chart {width: 100%; height: 200px; margin: 20px 0;}
+        .suggestion {padding: 15px; background-color: #e8f5e9; border-radius: 6px; color: #27ae60; font-size: 14px; line-height: 1.6;}
+    </style>
+    <script src="/static/js/jquery-3.6.0.min.js"></script>
+    <script src="/static/js/echarts.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>旅行费用计算器</h1>
+        <!-- 计算器表单 -->
+        <form id="cost-form">
+            <div class="form-group">
+                <label for="duration">旅行周期（天）</label>
+                <input type="number" id="duration" name="duration" min="1" required>
+                <div class="error" id="duration-error">请输入至少1天</div>
+            </div>
+            <div class="form-group">
+                <label for="acc_cost">日均住宿费用（元/天）</label>
+                <input type="number" id="acc_cost" name="acc_cost" min="0" step="0.01" required>
+                <div class="error" id="acc-error">请输入非负数字</div>
+            </div>
+            <div class="form-group">
+                <label for="trans_cost">总交通费用（元）</label>
+                <input type="number" id="trans_cost" name="trans_cost" min="0" step="0.01" required>
+                <div class="error" id="trans-error">请输入非负数字</div>
+            </div>
+            <button type="submit" id="calc-btn">计算费用</button>
+        </form>
+
+        <!-- 计算结果 -->
+        <div class="result" id="result">
+            <h2>费用计算结果</h2>
+            <div class="result-card">
+                <div class="cost-item">
+                    <span>旅行周期：</span>
+                    <span id="res-duration"></span>
+                </div>
+                <div class="cost-item">
+                    <span>总住宿费用：</span>
+                    <span id="res-acc-total"></span>
+                </div>
+                <div class="cost-item">
+                    <span>总交通费用：</span>
+                    <span id="res-trans-total"></span>
+                </div>
+                <div class="cost-item">
+                    <span>旅行总预算：</span>
+                    <span id="res-total-cost"></span>
+                </div>
+                <div class="cost-item">
+                    <span>日均预算：</span>
+                    <span id="res-daily-cost"></span>
+                </div>
+                <div class="cost-item">
+                    <span>住宿费用占比：</span>
+                    <span id="res-acc-ratio"></span>
+                </div>
+                <div class="cost-item">
+                    <span>交通费用占比：</span>
+                    <span id="res-trans-ratio"></span>
+                </div>
+            </div>
+            <!-- 费用占比图表 -->
+            <div class="cost-chart" id="cost-chart"></div>
+            <!-- 优化建议 -->
+            <div class="suggestion" id="suggestion"></div>
+        </div>
+    </div>
+
+    <script>
+        // 1. 表单校验
+        $('#duration').blur(function() {
+            if ($(this).val() < 1) {
+                $('#duration-error').show();
+            } else {
+                $('#duration-error').hide();
+            }
+        });
+        $('#acc_cost, #trans_cost').blur(function() {
+            if ($(this).val() < 0) {
+                var errorId = $(this).attr('id') + '-error';
+                $('#' + errorId).show();
+            } else {
+                var errorId = $(this).attr('id') + '-error';
+                $('#' + errorId).hide();
+            }
+        });
+
+        // 2. 表单提交（计算费用）
+        $('#cost-form').submit(function(e) {
+            e.preventDefault();
+            // 校验字段
+            var isValid = true;
+            if ($('#duration').val() < 1) {
+                $('#duration-error').show();
+                isValid = false;
+            }
+            if ($('#acc_cost').val() < 0) {
+                $('#acc-error').show();
+                isValid = false;
+            }
+            if ($('#trans_cost').val() < 0) {
+                $('#trans-error').show();
+                isValid = false;
+            }
+            if (!isValid) return;
+
+            // 1. 获取输入参数
+            var duration = parseFloat($('#duration').val());
+            var acc_cost_per_day = parseFloat($('#acc_cost').val());
+            var trans_cost_total = parseFloat($('#trans_cost').val());
+
+            // 2. 计算费用
+            var acc_cost_total = acc_cost_per_day * duration;  // 总住宿费用
+            var total_cost = acc_cost_total + trans_cost_total;  // 总预算
+            var daily_cost = total_cost / duration;  // 日均预算
+
+            // 3. 计算费用占比
+            var acc_ratio = (acc_cost_total / total_cost) * 100;
+            var trans_ratio = (trans_cost_total / total_cost) * 100;
+
+            // 4. 优化建议
+            var suggestion = "";
+            if (acc_ratio > 60) {
+                suggestion = "住宿费用占比过高（>60%），建议选择性价比更高的住宿（如民宿、青旅），可降低10-20%成本；或缩短1-2天旅行周期，减少总住宿支出。";
+            } else if (trans_ratio > 50) {
+                suggestion = "交通费用占比过高（>50%），建议提前1-2个月预订机票/火车票，通常可享受30%左右的折扣；或选择高铁、长途汽车等更经济的交通方式替代飞机。";
+            } else if (daily_cost < 200) {
+                suggestion = "日均预算较低（<200元），建议提前规划行程，优先选择免费景点，餐饮可选择当地特色小吃店（性价比更高），避免临时高价消费。";
+            } else {
+                suggestion = "费用分配合理（住宿占比30-60%，交通占比20-50%），符合中等旅行预算水平；可预留10-15%的备用金，应对临时支出（如景点门票、应急费用）。";
+            }
+
+            // 5. 显示结果
+            $('#result').show();
+            $('#res-duration').text(duration + ' 天');
+            $('#res-acc-total').text('¥' + acc_cost_total.toFixed(2));
+            $('#res-trans-total').text('¥' + trans_cost_total.toFixed(2));
+            $('#res-total-cost').text('¥' + total_cost.toFixed(2));
+            $('#res-daily-cost').text('¥' + daily_cost.toFixed(2));
+            $('#res-acc-ratio').text(acc_ratio.toFixed(1) + '%');
+            $('#res-trans-ratio').text(trans_ratio.toFixed(1) + '%');
+            $('#suggestion').text(suggestion);
+
+            // 6. 渲染费用占比图表（饼图）
+            var chart = echarts.init (document.getElementById ('cost-chart'));
+            var option = {
+            title: {text: ' 费用占比分布 ', left: 'center', fontSize: 14},
+            tooltip: {trigger: 'item', formatter: '{b}: {c} 元 ({d}%)'},
+            legend: {bottom: 0, left: 'center', data: [' 住宿费用 ', ' 交通费用 ']},
+            series: [
+            {
+            name: ' 费用占比 ',
+            type: 'pie',
+            radius: ['40%', '70%'],
+            avoidLabelOverlap: false,
+            itemStyle: {
+            borderRadius: 10,
+            borderColor: '#fff',
+            borderWidth: 2
+            },
+            label: {show: false, position: 'center'},
+            emphasis: {
+            label: {show: true, fontSize: 16, fontWeight: 'bold', formatter: '{b}\n {d}%'}
+            },
+            labelLine: {show: false},
+            data: [
+            {value: acc_cost_total, name: ' 住宿费用 ', itemStyle: {color: '#4895ef'}},
+            {value: trans_cost_total, name: ' 交通费用 ', itemStyle: {color: '#f7b84b'}}
+            ]
+            }
+            ]
+            };
+            chart.setOption (option);
+            // 窗口大小变化时图表自适应
+            window.addEventListener ('resize', function () {
+            chart.resize ();
+            });
+            });
+    </script>
+</body>
+</html>

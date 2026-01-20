@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>旅行数据可视化</title>
+    <link rel="stylesheet" href="/static/css/common.css">
+    <!-- 引入ECharts JS文件 -->
+    <script src="/static/js/echarts.min.js"></script>
+    <style>
+        .chart-container {
+            margin: 40px auto;
+            width: 100%;
+            max-width: 1000px;
+        }
+        #main {
+            width: 100%;
+            height: 600px;
+            border-radius: 10px;
+            background: #fff;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            padding: 20px;
+        }
+        /* 加载提示 */
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.2rem;
+            color: #999;
+        }
+        @media (max-width: 768px) {
+            #main {
+                height: 400px;
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>性别旅行周期对比可视化</h1>
+        <div class="chart-container" style="position: relative;">
+            <!-- 加载提示 -->
+            <div class="loading" id="loading">图表加载中...</div>
+            <div id="main"></div>
+        </div>
+    </div>
+    <script>
+        // 初始化ECharts实例
+        var myChart = echarts.init(document.getElementById('main'));
+        // 隐藏加载提示
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+        // 接收后端传递的配置（变量名已与后端统一）
+        var option = {{ echarts_option|safe }};
+        // 渲染图表
+        myChart.setOption(option);
+        hideLoading();
+        // 窗口大小变化时自适应
+        window.addEventListener('resize', function() {
+            myChart.resize();
+        });
+        // 图表加载失败兜底
+        myChart.on('error', function() {
+            document.getElementById('loading').innerText = '图表加载失败，请刷新页面';
+            document.getElementById('loading').style.color = '#f56c6c';
+        });
+    </script>
+</body>
+</html>

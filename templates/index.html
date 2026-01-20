@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>旅行数据分析系统</title>
+    <style>
+        * {margin: 0; padding: 0; box-sizing: border-box;}
+        body {font-family: "Microsoft YaHei", sans-serif; background-color: #f5f7fa;}
+        .container {width: 1200px; margin: 0 auto; padding: 50px 0;}
+        h1 {text-align: center; color: #2c3e50; margin-bottom: 60px; font-size: 32px;}
+        .func-cards {display: flex; justify-content: space-between; flex-wrap: wrap;}
+        .card {width: 280px; height: 320px; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); padding: 30px; margin-bottom: 40px; transition: all 0.3s;}
+        .card:hover {transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.12);}
+        .card-icon {width: 60px; height: 60px; background-color: #e3f2fd; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 25px;}
+        .card-icon i {font-size: 28px; color: #2196f3;}
+        .card h2 {color: #2c3e50; font-size: 20px; margin-bottom: 15px;}
+        .card p {color: #7f8c8d; font-size: 14px; line-height: 1.6; margin-bottom: 30px;}
+        .card-btn {display: inline-block; padding: 10px 20px; background-color: #2196f3; color: white; text-decoration: none; border-radius: 6px; font-size: 14px; transition: background 0.3s;}
+        .card-btn:hover {background-color: #1976d2;}
+    </style>
+    <!-- 引入图标库（可选） -->
+    <link rel="stylesheet" href="/static/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <h1>旅行数据分析系统</h1>
+        <div class="func-cards">
+            <!-- 多维度可视化 -->
+            <div class="card">
+                <div class="card-icon">
+                    <i class="fas fa-chart-bar"></i>
+                </div>
+                <h2>多维度可视化</h2>
+                <p>支持性别、年龄分段、费用区间、地域、季节5类维度的旅行周期对比，可筛选和导出图表。</p>
+                <a href="{% url 'visualization' %}" class="card-btn">进入可视化</a>
+            </div>
+
+            <!-- 旅行周期预测 -->
+            <div class="card">
+                <div class="card-icon">
+                    <i class="fas fa-brain"></i>
+                </div>
+                <h2>旅行周期预测</h2>
+                <p>输入年龄、住宿费用、交通费用3个参数，预测旅行周期及区间，并提供结果解读。</p>
+                <a href="{% url 'prediction' %}" class="card-btn">进入预测</a>
+            </div>
+
+            <!-- 数据管理 -->
+            <div class="card">
+                <div class="card-icon">
+                    <i class="fas fa-database"></i>
+                </div>
+                <h2>数据管理</h2>
+                <p>上传CSV格式的旅行数据，自动解析并导入数据库，支持数据预览和条数统计。</p>
+                <a href="{% url 'data_upload' %}" class="card-btn">上传数据</a>
+            </div>
+
+            <!-- 费用计算器 -->
+            <div class="card">
+                <div class="card-icon">
+                    <i class="fas fa-calculator"></i>
+                </div>
+                <h2>费用计算器</h2>
+                <p>输入旅行周期、日均住宿费用、总交通费用，计算总预算和费用占比，提供优化建议。</p>
+                <a href="{% url 'cost_calculator' %}" class="card-btn">开始计算</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

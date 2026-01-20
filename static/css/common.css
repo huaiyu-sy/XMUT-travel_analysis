@@ -1,0 +1,59 @@
+/* common.css - 全局通用样式 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Microsoft Yahei", "PingFang SC", sans-serif;
+}
+body {
+    background-color: #f5f7fa;
+    color: #333;
+}
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+/* 通用标题样式 */
+h1, h2, h3 {
+    color: #2d3748;
+    font-weight: 600;
+    margin-bottom: 20px;
+}
+h1 {
+    font-size: 2.2rem;
+    text-align: center;
+    margin-top: 40px;
+}
+h2 {
+    font-size: 1.8rem;
+    border-left: 4px solid #2196F3;
+    padding-left: 10px;
+}
+/* 通用按钮样式 */
+.btn, button {
+    transition: all 0.3s ease;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+/* 通用阴影/圆角 */
+.card {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    padding: 24px;
+}
+/* 响应式适配 */
+@media (max-width: 768px) {
+    h1 {
+        font-size: 1.8rem;
+    }
+    h2 {
+        font-size: 1.5rem;
+    }
+    .container {
+        width: 100%;
+        padding: 0 15px;
+    }
+}

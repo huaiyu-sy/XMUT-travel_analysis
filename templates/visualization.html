@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>多维度旅行数据可视化</title>
+    <style>
+        * {margin: 0; padding: 0; box-sizing: border-box;}
+        body {font-family: "Microsoft YaHei", sans-serif; padding: 20px;}
+        .header {margin-bottom: 30px;}
+        .header h1 {color: #2c3e50; font-size: 26px; margin-bottom: 20px;}
+        .filter-bar {display: flex; gap: 20px; align-items: center; margin-bottom: 20px;}
+        .filter-bar select, .filter-bar button {padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;}
+        .filter-bar button {background-color: #2196f3; color: white; border: none; cursor: pointer;}
+        .filter-bar button:hover {background-color: #1976d2;}
+        .dimension-tabs {display: flex; gap: 10px; margin-bottom: 20px;}
+        .dimension-tabs button {padding: 8px 16px; border: 1px solid #ddd; border-radius: 6px; background: white; cursor: pointer; font-size: 14px;}
+        .dimension-tabs button.active {background-color: #2196f3; color: white; border-color: #2196f3;}
+        #chart-container {width: 100%; height: 500px; border: 1px solid #eee; border-radius: 8px; padding: 10px;}
+    </style>
+    <!-- 引入ECharts JS -->
+    <script src="/static/js/echarts.min.js"></script>
+    <script src="/static/js/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div class="header">
+        <h1>多维度旅行周期分析</h1>
+        <!-- 筛选栏 -->
+        <form id="filter-form" class="filter-bar">
+            <div>
+                <label for="season">出行季节：</label>
+                <select id="season" name="season">
+                    <option value="">全部季节</option>
+                    {% for season in all_seasons %}
+                    <option value="{{ season }}" {% if selected_season == season %}selected{% endif %}>{{ season }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="region">地域：</label>
+                <select id="region" name="region">
+                    <option value="">全部地域</option>
+                    {% for region in all_regions %}
+                    <option value="{{ region }}" {% if selected_region == region %}selected{% endif %}>{{ region }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit">筛选数据</button>
+        </form>
+
+        <!-- 维度切换标签 -->
+        <div class="dimension-tabs">
+            <button class="dim-btn active" data-dim="gender">性别对比</button>
+            <button class="dim-btn" data-dim="age">年龄分段对比</button>
+            <button class="dim-btn" data-dim="cost">费用区间对比</button>
+            <button class="dim-btn" data-dim="region">地域对比</button>
+            <button class="dim-btn" data-dim="season">季节对比</button>
+        </div>
+    </div>
+
+    <!-- 图表容器 -->
+    <div id="chart-container"></div>
+
+    <script>
+        // 1. 初始化图表
+        var myChart = echarts.init(document.getElementById('chart-container'));
+        // 2. 获取各维度数据（从后端传递）
+        var genderData = {{ gender_data|safe }};
+        var ageData = {{ age_data|safe }};
+        var costData = {{ cost_data|safe }};
+        var regionData = {{ region_data|safe }};
+        var seasonData = {{ season_data|safe }};
+        // 3. 基础配置（从后端传递）
+        var baseOption = {{ init_option|safe }};
+
+        // 4. 渲染指定维度的图表
+        function renderChart(dimension) {
+            var data = {};
+            switch(dimension) {
+                case 'gender': data = genderData; break;
+                case 'age': data = ageData; break;
+                case 'cost': data = costData; break;
+                case 'region': data = regionData; break;
+                case 'season': data = seasonData; break;
+            }
+            // 更新X轴和数据
+            baseOption.xAxis.data = data.labels;
+            baseOption.series[0].data = data.values;
+            // 重新渲染
+            myChart.setOption(baseOption);
+        }
+
+        // 5. 初始渲染性别对比
+        renderChart('gender');
+
+        // 6. 维度切换事件
+        $('.dim-btn').click(function() {
+            $('.dim-btn').removeClass('active');
+            $(this).addClass('active');
+            var dim = $(this).data('dim');
+            renderChart(dim);
+        });
+
+        // 7. 筛选表单提交事件
+        $('#filter-form').submit(function(e) {
+            e.preventDefault();
+            var season = $('#season').val();
+            var region = $('#region').val();
+            // 跳转并携带筛选参数
+            var url = "{% url 'visualization' %}?";
+            if (season) url += "season=" + season + "&";
+            if (region) url += "region=" + region + "&";
+            window.location.href = url.slice(0, -1); // 移除最后一个&
+        });
+
+        // 8. 窗口大小变化时自适应
+        window.addEventListener('resize', function() {
+            myChart.resize();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>旅行期间分析系统</title>
+    <!-- 引入通用样式 -->
+    <link rel="stylesheet" href="/static/css/common.css">
+    <style>
+        .main-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(120deg, #e0f7fa 0%, #f5f5f5 100%);
+        }
+        .title-box {
+            margin-bottom: 60px;
+        }
+        .title-box p {
+            text-align: center;
+            color: #718096;
+            font-size: 1.1rem;
+            margin-top: 10px;
+        }
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 16px 36px;
+            background-color: #2196F3;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 18px;
+            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+        }
+        .btn:hover {
+            background-color: #1976D2;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(33, 150, 243, 0.4);
+        }
+        .btn:nth-child(2) {
+            background-color: #4CAF50;
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+        }
+        .btn:nth-child(2):hover {
+            background-color: #388E3C;
+            box-shadow: 0 6px 16px rgba(76, 175, 80, 0.4);
+        }
+        @media (max-width: 768px) {
+            .btn-group {
+                flex-direction: column;
+                width: 90%;
+            }
+            .btn {
+                width: 100%;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container container">
+        <div class="title-box">
+            <h1>旅行期间分析系统</h1>
+            <p>基于数据的旅行周期分析与预测，助力精准规划</p>
+        </div>
+        <div class="btn-group">
+            <a href="{% url 'visualization' %}" class="btn">数据可视化（性别旅行周期对比）</a>
+            <a href="{% url 'prediction' %}" class="btn">旅行周期预测</a>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>旅行周期预测</title>
+    <link rel="stylesheet" href="/static/css/common.css">
+    <style>
+        .prediction-card {
+            max-width: 600px;
+            margin: 40px auto;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #4a5568;
+        }
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+        input:focus {
+            outline: none;
+            border-color: #2196F3;
+            box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            background-color: #4CAF50;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #388E3C;
+            transform: translateY(-2px);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        .result {
+            margin-top: 24px;
+            padding: 20px;
+            background-color: #e8f4f8;
+            border-left: 4px solid #2196F3;
+            border-radius: 6px;
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+        .result h3 {
+            margin-bottom: 10px;
+            color: #2d3748;
+        }
+        .result p {
+            font-size: 1.1rem;
+            color: #4a5568;
+        }
+        #predictedDuration {
+            color: #2196F3;
+            font-weight: 700;
+            font-size: 1.2rem;
+        }
+        /* 动画效果 */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>旅行周期预测</h1>
+        <div class="prediction-card card">
+            <form id="predictionForm">
+                <div class="form-group">
+                    <label for="age">旅行者年龄：</label>
+                    <input type="number" id="age" name="age" min="0" max="100" required placeholder="请输入0-100之间的整数">
+                </div>
+                <div class="form-group">
+                    <label for="acc_cost">住宿费用（元）：</label>
+                    <input type="number" id="acc_cost" name="acc_cost" min="0" step="0.01" required placeholder="请输入住宿费用，如：200.50">
+                </div>
+                <div class="form-group">
+                    <label for="trans_cost">交通费用（元）：</label>
+                    <input type="number" id="trans_cost" name="trans_cost" min="0" step="0.01" required placeholder="请输入交通费用，如：150.00">
+                </div>
+                <button type="submit">预测旅行周期</button>
+            </form>
+            <div class="result" id="result">
+                <h3>预测结果</h3>
+                <p>预计旅行周期为 <span id="predictedDuration"></span> 天</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
+    <script>
+        // 监听表单提交
+        $("#predictionForm").submit(function(e) {
+            e.preventDefault();  // 阻止表单默认提交
+            var formData = $(this).serialize();  // 获取表单数据
+
+            // 发送AJAX请求到后端
+            $.ajax({
+                url: "/predict/",
+                type: "POST",
+                data: formData,
+                headers: {
+                    "X-CSRFToken": "{{ csrf_token }}"  // Django防跨站请求伪造
+                },
+                beforeSend: function() {
+                    // 提交前按钮置灰
+                    $("button").attr("disabled", true).text("预测中...");
+                },
+                success: function(response) {
+                    if (response.status === "success") {
+                        $("#predictedDuration").text(response.predicted_duration);
+                        $("#result").show();  // 显示预测结果
+                    }
+                },
+                error: function() {
+                    alert("预测失败，请检查输入数据！");
+                },
+                complete: function() {
+                    // 恢复按钮状态
+                    $("button").attr("disabled", false).text("预测旅行周期");
+                }
+            });
+        });
+    </script>
+</body>
+</html>

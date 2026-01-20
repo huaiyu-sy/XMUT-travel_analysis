@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>旅行周期预测</title>
+    <style>
+        * {margin: 0; padding: 0; box-sizing: border-box;}
+        body {font-family: "Microsoft YaHei", sans-serif; padding: 20px;}
+        .container {width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);}
+        h1 {color: #2c3e50; font-size: 24px; margin-bottom: 30px; text-align: center;}
+        .form-group {margin-bottom: 25px;}
+        .form-group label {display: block; margin-bottom: 8px; color: #34495e; font-size: 14px; font-weight: 500;}
+        .form-group input {width: 100%; padding: 12px 15px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;}
+        .form-group input:focus {outline: none; border-color: #2196f3; box-shadow: 0 0 0 2px rgba(33,150,243,0.2);}
+        .error {color: #e74c3c; font-size: 12px; margin-top: 5px; display: none;}
+        #predict-btn {width: 100%; padding: 14px; background-color: #2196f3; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; transition: background 0.3s;}
+        #predict-btn:hover {background-color: #1976d2;}
+        .loading {text-align: center; padding: 14px; display: none;}
+        .result {margin-top: 30px; padding: 25px; background-color: #f8f9fa; border-radius: 8px; display: none;}
+        .result h2 {color: #2c3e50; font-size: 18px; margin-bottom: 20px;}
+        .result-item {margin-bottom: 15px; font-size: 14px; color: #34495e;}
+        .result-item span {font-weight: 500; color: #2196f3;}
+        .history-section {margin-top: 40px;}
+        .history-section h2 {color: #2c3e50; font-size: 18px; margin-bottom: 15px;}
+        .history-list {max-height: 200px; overflow-y: auto;}
+        .history-item {padding: 12px; border: 1px solid #eee; border-radius: 6px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;}
+        .history-item .info {font-size: 12px; color: #7f8c8d;}
+        .history-item .del-btn {padding: 4px 8px; background-color: #e74c3c; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;}
+        #clear-history {margin-top: 10px; padding: 6px 12px; background-color: #95a5a6; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;}
+    </style>
+    <script src="/static/js/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>旅行周期预测</h1>
+        <!-- 预测表单 -->
+        <form id="prediction-form">
+            <div class="form-group">
+                <label for="age">旅行者年龄（岁）</label>
+                <input type="number" id="age" name="traveler_age" min="1" max="120" required>
+                <div class="error" id="age-error">请输入1-120之间的整数</div>
+            </div>
+            <div class="form-group">
+                <label for="acc_cost">住宿费用（元）</label>
+                <input type="number" id="acc_cost" name="accommodation_cost" min="0" step="0.01" required>
+                <div class="error" id="acc-error">请输入非负数字</div>
+            </div>
+            <div class="form-group">
+                <label for="trans_cost">交通费用（元）</label>
+                <input type="number" id="trans_cost" name="transportation_cost" min="0" step="0.01" required>
+                <div class="error" id="trans-error">请输入非负数字</div>
+            </div>
+            <div class="loading" id="loading">正在预测，请稍候...</div>
+            <button type="submit" id="predict-btn">预测旅行周期</button>
+        </form>
+
+        <!-- 预测结果 -->
+        <div class="result" id="result">
+            <h2>预测结果</h2>
+            <div class="result-item">预计旅行周期：<span id="pred-duration"></span> 天</div>
+            <div class="result-item">预测区间（<span id="confidence"></span>置信度）：<span id="pred-range"></span> 天</div>
+            <div class="result-item">结果解读：<span id="analysis"></span></div>
+            <button id="save-history" style="margin-top: 15px; padding: 8px 16px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer;">保存到历史记录</button>
+        </div>
+
+        <!-- 历史记录 -->
+        <div class="history-section">
+            <h2>历史预测记录</h2>
+            <div class="history-list" id="history-list"></div>
+            <button id="clear-history">清空历史</button>
+        </div>
+    </div>
+
+    <script>
+        // 1. 表单校验
+        $('#age').blur(function() {
+            var age = $(this).val();
+            if (age < 1 || age > 120) {
+                $('#age-error').show();
+            } else {
+                $('#age-error').hide();
+            }
+        });
+        $('#acc_cost, #trans_cost').blur(function() {
+            var val = $(this).val();
+            var errorId = $(this).attr('id') + '-error';
+            if (val < 0) {
+                $('#' + errorId).show();
+            } else {
+                $('#' + errorId).hide();
+            }
+        });
+
+        // 2. 表单提交
+        $('#prediction-form').submit(function(e) {
+            e.preventDefault();
+            // 校验所有字段
+            var isValid = true;
+            if ($('#age').val() < 1 || $('#age').val() > 120) {
+                $('#age-error').show();
+                isValid = false;
+            }
+            if ($('#acc_cost').val() < 0) {
+                $('#acc-error').show();
+                isValid = false;
+            }
+            if ($('#trans_cost').val() < 0) {
+                $('#trans-error').show();
+                isValid = false;
+            }
+            if (!isValid) return;
+
+            // 显示加载状态
+            $('#predict-btn').hide();
+            $('#loading').show();
+
+            // 收集参数
+            var formData = $(this).serialize();
+
+            // 发送AJAX请求
+            $.ajax({
+                url: "{% url 'predict_api' %}",
+                type: "POST",
+                data: formData,
+                headers: {
+                    "X-CSRFToken": "{{ csrf_token }}"  // Django防跨站请求
+                },
+                success: function(res) {
+                    if (res.status === 'success') {
+                        // 显示结果
+                        $('#loading').hide();
+                        $('#result').show();
+                        $('#pred-duration').text(res.pred_duration);
+                        $('#confidence').text(res.confidence);
+                        $('#pred-range').text(res.lower_bound + ' - ' + res.upper_bound);
+                        $('#analysis').text(res.analysis);
+                        // 暂存结果（用于保存历史）
+                        window.currentPred = res;
+                        window.currentInput = {
+                            age: $('#age').val(),
+                            acc_cost: $('#acc_cost').val(),
+                            trans_cost: $('#trans_cost').val(),
+                            time: new Date().toLocaleString()
+                        };
+                    } else {
+                        alert('预测失败：' + res.message);
+                        $('#loading').hide();
+                        $('#predict-btn').show();
+                    }
+                },
+                error: function() {
+                    alert('服务器错误，请重试！');
+                    $('#loading').hide();
+                    $('#predict-btn').show();
+                }
+            });
+        });
+
+        // 3. 历史记录管理（localStorage）
+        // 加载历史记录
+        function loadHistory() {
+            var history = JSON.parse(localStorage.getItem('travelPredHistory')) || [];
+            var historyList = $('#history-list');
+            historyList.empty();
+            if (history.length === 0) {
+                historyList.html('<div style="text-align: center; padding: 10px; color: #7f8c8d;">暂无历史记录</div>');
+                return;
+            }
+            history.forEach(function(item, index) {
+                var itemHtml = `
+                    <div class="history-item">
+                        <div class="info">
+                            年龄：${item.input.age}岁 | 住宿：${item.input.acc_cost}元 | 交通：${item.input.trans_cost}元<br>
+                            预测：${item.pred.pred_duration}天（${item.pred.lower_bound}-${item.pred.upper_bound}天） | ${item.input.time}
+                        </div>
+                        <button class="del-btn" data-index="${index}">删除</button>
+                    </div>
+                `;
+                historyList.append(itemHtml);
+            });
+            // 删除单个记录
+            $('.del-btn').click(function() {
+                var index = $(this).data('index');
+                var history = JSON.parse(localStorage.getItem('travelPredHistory')) || [];
+                history.splice(index, 1);
+                localStorage.setItem('travelPredHistory', JSON.stringify(history));
+                loadHistory();
+            });
+        }
+
+        // 保存历史记录
+        $('#save-history').click(function() {
+            var history = JSON.parse(localStorage.getItem('travelPredHistory')) || [];
+            history.push({
+                input: window.currentInput,
+                pred: window.currentPred
+            });
+            localStorage.setItem('travelPredHistory', JSON.stringify(history));
+            alert('历史记录保存成功！');
+            loadHistory();
+        });
+
+        // 清空历史记录
+        $('#clear-history').click(function() {
+            if (confirm('确定要清空所有历史记录吗？')) {
+                localStorage.removeItem('travelPredHistory');
+                loadHistory();
+            }
+        });
+
+        // 初始加载历史记录
+        loadHistory();
+    </script>
+</body>
+</html>

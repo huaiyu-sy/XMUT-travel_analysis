@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>数据管理（上传+预览）</title>
+    <style>
+        * {margin: 0; padding: 0; box-sizing: border-box;}
+        body {font-family: "Microsoft YaHei", sans-serif; padding: 20px;}
+        .container {width: 1000px; margin: 0 auto; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);}
+        h1 {color: #2c3e50; font-size: 24px; margin-bottom: 30px; text-align: center;}
+        .upload-section {margin-bottom: 40px;}
+        .upload-section h2 {color: #34495e; font-size: 18px; margin-bottom: 15px;}
+        .upload-box {border: 2px dashed #ddd; border-radius: 8px; padding: 40px; text-align: center; margin-bottom: 20px; cursor: pointer; transition: border-color 0.3s;}
+        .upload-box:hover {border-color: #2196f3;}
+        .upload-box i {font-size: 48px; color: #bdc3c7; margin-bottom: 15px;}
+        .upload-box p {color: #7f8c8d; font-size: 14px; margin-bottom: 10px;}
+        #file-input {display: none;}
+        #upload-btn {padding: 10px 20px; background-color: #2196f3; color: white; border: none; border-radius: 6px; font-size: 14px; cursor: pointer;}
+        .message {padding: 15px; border-radius: 6px; margin-bottom: 20px; font-size: 14px;}
+        .success {background-color: #e8f5e9; color: #2ecc71;}
+        .error {background-color: #ffebee; color: #e74c3c;}
+        .preview-section h2 {color: #34495e; font-size: 18px; margin-bottom: 15px;}
+        .preview-info {color: #7f8c8d; font-size: 14px; margin-bottom: 15px;}
+        .data-table {width: 100%; border-collapse: collapse; font-size: 12px;}
+        .data-table th, .data-table td {border: 1px solid #eee; padding: 8px 12px; text-align: left;}
+        .data-table th {background-color: #f8f9fa; color: #34495e; font-weight: 500;}
+        .data-table tr:nth-child(even) {background-color: #f9f9f9;}
+    </style>
+    <link rel="stylesheet" href="/static/css/all.min.css">
+    <script src="/static/js/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>旅行数据管理</h1>
+
+        <!-- 数据上传区域 -->
+        <div class="upload-section">
+            <h2>上传CSV数据文件</h2>
+            {% if success %}
+            <div class="message success">{{ success }}</div>
+            {% endif %}
+            {% if error %}
+            <div class="message error">{{ error }}</div>
+            {% endif %}
+            <form id="upload-form" method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="upload-box" id="upload-box">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>点击或拖拽CSV文件到此处上传</p>
+                    <p>支持格式：.csv（建议使用Travel details dataset.csv格式）</p>
+                    <input type="file" id="file-input" name="csv_file" accept=".csv">
+                </div>
+                <button type="submit" id="upload-btn" disabled>上传数据</button>
+            </form>
+        </div>
+
+        <!-- 数据预览区域 -->
+        <div class="preview-section">
+            <h2>数据预览（前10条）</h2>
+            {% if total_count is not None and total_count > 0 %}
+            <div class="preview-info">当前数据库共有 {{ total_count }} 条旅行记录</div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>旅行ID</th>
+                        <th>目的地</th>
+                        <th>旅行周期（天）</th>
+                        <th>旅行者年龄</th>
+                        <th>性别</th>
+                        <th>总费用（元）</th>
+                        <th>地域</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in preview_data %}
+                    <tr>
+                        <td>{{ item.trip_id|default:'' }}</td>
+                        <td>{{ item.destination|default:'' }}</td>
+                        <td>{{ item.duration|default:'' }}</td>
+                        <td>{{ item.traveler_age|default:'' }}</td>
+                        <td>{{ item.traveler_gender|default:'' }}</td>
+                        <td>{{ item.total_cost|default:'' }}</td>
+                        <td>{{ item.region|default:'' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="preview-info">暂无数据，请上传CSV文件</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        // 1. 上传框点击事件（触发文件选择）
+        $('#upload-box').click(function() {
+            $('#file-input').click();
+        });
+
+        // 2. 文件选择后启用上传按钮
+        $('#file-input').change(function() {
+            var file = this.files[0];
+            if (file) {
+                $('#upload-btn').prop('disabled', false);
+                $('#upload-box p:first').text(`已选择文件：${file.name}`);
+            } else {
+                $('#upload-btn').prop('disabled', true);
+                $('#upload-box p:first').text('点击或拖拽CSV文件到此处上传');
+            }
+        });
+
+        // 3. 拖拽上传（可选）
+        $('#upload-box').on('dragover', function(e) {
+            e.preventDefault();
+            $(this).css('border-color', '#2196f3');
+        });
+        $('#upload-box').on('dragleave', function() {
+            $(this).css('border-color', '#ddd');
+        });
+        $('#upload-box').on('drop', function(e) {
+            e.preventDefault();
+            $(this).css('border-color', '#ddd');
+            var file = e.originalEvent.dataTransfer.files[0];
+            if (file && file.name.endsWith('.csv')) {
+                $('#file-input')[0].files = e.originalEvent.dataTransfer.files;
+                $('#upload-btn').prop('disabled', false);
+                $('#upload-box p:first').text(`已选择文件：${file.name}`);
+            } else {
+                alert('请上传CSV格式的文件！');
+            }
+        });
+    </script>
+</body>
+</html>
