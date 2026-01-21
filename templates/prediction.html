@@ -37,17 +37,18 @@
         <form id="prediction-form">
             <div class="form-group">
                 <label for="age">旅行者年龄（岁）</label>
-                <input type="number" id="age" name="traveler_age" min="1" max="120" required>
+                <!-- 补充step=1确保输入整数，优化必填提示 -->
+                <input type="number" id="age" name="traveler_age" min="1" max="120" step="1" required placeholder="请输入1-120之间的整数">
                 <div class="error" id="age-error">请输入1-120之间的整数</div>
             </div>
             <div class="form-group">
                 <label for="acc_cost">住宿费用（元）</label>
-                <input type="number" id="acc_cost" name="accommodation_cost" min="0" step="0.01" required>
+                <input type="number" id="acc_cost" name="accommodation_cost" min="0" step="0.01" required placeholder="请输入非负数字">
                 <div class="error" id="acc-error">请输入非负数字</div>
             </div>
             <div class="form-group">
                 <label for="trans_cost">交通费用（元）</label>
-                <input type="number" id="trans_cost" name="transportation_cost" min="0" step="0.01" required>
+                <input type="number" id="trans_cost" name="transportation_cost" min="0" step="0.01" required placeholder="请输入非负数字">
                 <div class="error" id="trans-error">请输入非负数字</div>
             </div>
             <div class="loading" id="loading">正在预测，请稍候...</div>
@@ -72,19 +73,26 @@
     </div>
 
     <script>
-        // 1. 表单校验
+        // 初始化变量，避免未定义报错
+        window.currentPred = null;
+        window.currentInput = null;
+
+        // 1. 表单校验 - 优化空值、非数字判断
         $('#age').blur(function() {
-            var age = $(this).val();
-            if (age < 1 || age > 120) {
+            var age = Number($(this).val());
+            // 补充NaN、空值判断
+            if (isNaN(age) || age < 1 || age > 120) {
                 $('#age-error').show();
             } else {
                 $('#age-error').hide();
             }
         });
+
         $('#acc_cost, #trans_cost').blur(function() {
-            var val = $(this).val();
+            var val = Number($(this).val());
             var errorId = $(this).attr('id') + '-error';
-            if (val < 0) {
+            // 补充NaN判断
+            if (isNaN(val) || val < 0) {
                 $('#' + errorId).show();
             } else {
                 $('#' + errorId).hide();
@@ -94,122 +102,237 @@
         // 2. 表单提交
         $('#prediction-form').submit(function(e) {
             e.preventDefault();
-            // 校验所有字段
+            // 重置错误提示
+            $('.error').hide();
             var isValid = true;
-            if ($('#age').val() < 1 || $('#age').val() > 120) {
+
+                // 步骤1：封装校验函数，复用逻辑
+            function validateNumber(val, min, max, errorEl) {
+                var num = Number(val);
+                if (val === '' || isNaN(num) || num < min || (max && num > max)) {
+                    errorEl.show();
+                    return false;
+                }
+                errorEl.hide();
+                return true;
+            }
+        
+            // 步骤2：兜底校验所有字段（覆盖未触发blur的场景）
+            var ageVal = $('#age').val().trim(); // 去除空格
+            var accVal = $('#acc_cost').val().trim();
+            var transVal = $('#trans_cost').val().trim();
+        
+            isValid = validateNumber(ageVal, 1, 120, $('#age-error')) && isValid;
+            isValid = validateNumber(accVal, 0, null, $('#acc-error')) && isValid; // 无上限
+            isValid = validateNumber(transVal, 0, null, $('#trans-error')) && isValid;
+        
+            if (!isValid) return; // 校验失败直接返回
+            
+            // 年龄校验（转数字+空值+范围）
+            var age = Number($('#age').val());
+            if (isNaN(age) || age < 1 || age > 120) {
                 $('#age-error').show();
                 isValid = false;
             }
-            if ($('#acc_cost').val() < 0) {
+
+            // 住宿费用校验
+            var accCost = Number($('#acc_cost').val());
+            if (isNaN(accCost) || accCost < 0) {
                 $('#acc-error').show();
                 isValid = false;
             }
-            if ($('#trans_cost').val() < 0) {
+
+            // 交通费用校验
+            var transCost = Number($('#trans_cost').val());
+            if (isNaN(transCost) || transCost < 0) {
                 $('#trans-error').show();
                 isValid = false;
             }
+
             if (!isValid) return;
 
-            // 显示加载状态
+            // 显示加载状态，隐藏按钮
             $('#predict-btn').hide();
             $('#loading').show();
+            // 隐藏结果面板
+            $('#result').hide();
 
-            // 收集参数
-            var formData = $(this).serialize();
+            // 收集参数（确保为数字类型）
+            var formData = {
+                traveler_age: age,
+                accommodation_cost: accCost,
+                transportation_cost: transCost
+            };
 
             // 发送AJAX请求
             $.ajax({
-                url: "{% url 'predict_api' %}",
+                // 注意：Django项目中需替换为实际的URL名称解析值，纯HTML需替换为实际接口地址
+                url: "{% url 'predict_api' %}", 
                 type: "POST",
                 data: formData,
+                dataType: "json",
                 headers: {
-                    "X-CSRFToken": "{{ csrf_token }}"  // Django防跨站请求
+                    // 修复：正确获取CSRF Token（Django模板自动生成）
+                    "X-CSRFToken": $('input[name="csrfmiddlewaretoken"]').val() 
                 },
                 success: function(res) {
-                    if (res.status === 'success') {
+                    // 恢复按钮显示
+                    $('#loading').hide();
+                    $('#predict-btn').show();
+
+                    if (res && res.status === 'success') {
                         // 显示结果
-                        $('#loading').hide();
                         $('#result').show();
-                        $('#pred-duration').text(res.pred_duration);
-                        $('#confidence').text(res.confidence);
-                        $('#pred-range').text(res.lower_bound + ' - ' + res.upper_bound);
-                        $('#analysis').text(res.analysis);
-                        // 暂存结果（用于保存历史）
-                        window.currentPred = res;
+                        $('#pred-duration').text(res.pred_duration || 0);
+                        $('#confidence').text(res.confidence || '95%');
+                        $('#pred-range').text((res.lower_bound || 0) + ' - ' + (res.upper_bound || 0));
+                        $('#analysis').text(res.analysis || '暂无解读');
+                        // 暂存结果（用于保存历史）- 深拷贝避免引用问题
+                        window.currentPred = JSON.parse(JSON.stringify(res));
                         window.currentInput = {
-                            age: $('#age').val(),
-                            acc_cost: $('#acc_cost').val(),
-                            trans_cost: $('#trans_cost').val(),
+                            age: age,
+                            acc_cost: accCost,
+                            trans_cost: transCost,
                             time: new Date().toLocaleString()
                         };
                     } else {
-                        alert('预测失败：' + res.message);
-                        $('#loading').hide();
-                        $('#predict-btn').show();
+                        alert('预测失败：' + (res?.message || '未知错误'));
                     }
                 },
-                error: function() {
-                    alert('服务器错误，请重试！');
-                    $('#loading').hide();
-                    $('#predict-btn').show();
-                }
+                error: function(xhr, status, error) {
+                        $('#loading').hide();
+                        $('#predict-btn').show();
+                        // 步骤：细化错误提示（区分404/403/500）
+                        var errorMsg = '服务器错误，请重试！';
+                        if (xhr.status === 403) errorMsg = '权限验证失败，请刷新页面重试';
+                        if (xhr.status === 404) errorMsg = '预测接口不存在，请检查后端配置';
+                        if (xhr.status === 400) errorMsg = '参数错误：' + (xhr.responseJSON?.message || '无效参数');
+                        alert(errorMsg + ' 错误信息：' + error);
+                    }
             });
         });
 
         // 3. 历史记录管理（localStorage）
-        // 加载历史记录
+        // 加载历史记录 - 优化DOM绑定，避免重复绑定事件
+        // 修复：完整的历史记录加载函数（含正确的try-catch结构）
         function loadHistory() {
-            var history = JSON.parse(localStorage.getItem('travelPredHistory')) || [];
             var historyList = $('#history-list');
-            historyList.empty();
-            if (history.length === 0) {
-                historyList.html('<div style="text-align: center; padding: 10px; color: #7f8c8d;">暂无历史记录</div>');
-                return;
-            }
-            history.forEach(function(item, index) {
-                var itemHtml = `
-                    <div class="history-item">
-                        <div class="info">
-                            年龄：${item.input.age}岁 | 住宿：${item.input.acc_cost}元 | 交通：${item.input.trans_cost}元<br>
-                            预测：${item.pred.pred_duration}天（${item.pred.lower_bound}-${item.pred.upper_bound}天） | ${item.input.time}
+            historyList.empty(); // 清空列表，避免重复渲染
+        
+            try {
+                // 1. 读取localStorage数据（带异常捕获）
+                var historyStr = localStorage.getItem('travelPredHistory');
+                // 处理空值：若未存储过历史记录，默认是空数组
+                var history = historyStr ? JSON.parse(historyStr) : [];
+        
+                // 2. 限制历史记录数量（最多20条，避免数据过多）
+                if (history.length > 20) {
+                    history = history.slice(-20); // 只保留最后20条
+                    localStorage.setItem('travelPredHistory', JSON.stringify(history));
+                }
+        
+                // 3. 渲染历史记录
+                if (history.length === 0) {
+                    historyList.html('<div style="text-align: center; padding: 10px; color: #7f8c8d;">暂无历史记录</div>');
+                    return;
+                }
+        
+                // 拼接HTML（减少DOM操作，提升性能）
+                var historyHtml = '';
+                history.forEach(function(item, index) {
+                    var input = item.input || {}; // 兼容数据缺失
+                    var pred = item.pred || {};
+                    historyHtml += `
+                        <div class="history-item">
+                            <div class="info">
+                                年龄：${input.age || '未知'}岁 | 住宿：${input.acc_cost || 0}元 | 交通：${input.trans_cost || 0}元<br>
+                                预测：${pred.pred_duration || 0}天（${pred.lower_bound || 0}-${pred.upper_bound || 0}天）<br>
+                                时间：${input.time || '未知时间'}
+                            </div>
+                            <button class="del-btn" data-index="${index}">删除</button>
                         </div>
-                        <button class="del-btn" data-index="${index}">删除</button>
-                    </div>
-                `;
-                historyList.append(itemHtml);
-            });
-            // 删除单个记录
-            $('.del-btn').click(function() {
-                var index = $(this).data('index');
-                var history = JSON.parse(localStorage.getItem('travelPredHistory')) || [];
-                history.splice(index, 1);
-                localStorage.setItem('travelPredHistory', JSON.stringify(history));
-                loadHistory();
-            });
+                    `;
+                });
+                historyList.html(historyHtml);
+        
+                // 4. 委托绑定删除按钮事件（避免重复绑定）
+                historyList.off('click', '.del-btn').on('click', '.del-btn', function() {
+                    var index = $(this).data('index');
+                    // 再次读取最新数据（防止并发修改）
+                    var currentHistory = JSON.parse(localStorage.getItem('travelPredHistory')) || [];
+                    currentHistory.splice(index, 1); // 删除指定记录
+                    localStorage.setItem('travelPredHistory', JSON.stringify(currentHistory));
+                    loadHistory(); // 重新渲染列表
+                });
+        
+            } catch (e) {
+                // 5. 异常处理（如JSON解析失败、localStorage异常）
+                localStorage.removeItem('travelPredHistory'); // 重置异常数据
+                historyList.html('<div style="text-align: center; padding: 10px; color: #e74c3c;">历史记录异常，已重置</div>');
+                console.error('加载历史记录失败：', e); // 控制台打印错误，便于调试
+            }
         }
-
-        // 保存历史记录
+        
+        // 保存历史记录函数（同步优化，避免语法错误）
         $('#save-history').click(function() {
-            var history = JSON.parse(localStorage.getItem('travelPredHistory')) || [];
-            history.push({
-                input: window.currentInput,
-                pred: window.currentPred
-            });
-            localStorage.setItem('travelPredHistory', JSON.stringify(history));
-            alert('历史记录保存成功！');
-            loadHistory();
-        });
-
-        // 清空历史记录
-        $('#clear-history').click(function() {
-            if (confirm('确定要清空所有历史记录吗？')) {
-                localStorage.removeItem('travelPredHistory');
-                loadHistory();
+            try {
+                // 校验是否有可保存的预测结果
+                if (!window.currentPred || !window.currentInput) {
+                    alert('暂无可保存的预测结果！');
+                    return;
+                }
+        
+                // 读取现有历史
+                var history = JSON.parse(localStorage.getItem('travelPredHistory')) || [];
+                // 防重复：通过“时间+年龄”判断是否为同一记录
+                var isDuplicate = history.some(item => 
+                    item.input?.time === window.currentInput.time && item.input?.age === window.currentInput.age
+                );
+                if (isDuplicate) {
+                    alert('该记录已保存，无需重复保存！');
+                    return;
+                }
+        
+                // 添加新记录并保存
+                history.push({
+                    input: window.currentInput,
+                    pred: window.currentPred
+                });
+                localStorage.setItem('travelPredHistory', JSON.stringify(history));
+                alert('历史记录保存成功！');
+                loadHistory(); // 重新渲染
+        
+            } catch (e) {
+                alert('保存历史记录失败：' + e.message);
+                console.error('保存历史失败：', e);
             }
         });
-
-        // 初始加载历史记录
-        loadHistory();
+        
+        // 清空历史记录函数（添加二次确认）
+        $('#clear-history').click(function() {
+            try {
+                var history = JSON.parse(localStorage.getItem('travelPredHistory')) || [];
+                if (history.length === 0) {
+                    alert('暂无历史记录可清空！');
+                    return;
+                }
+                if (confirm('确定要清空所有历史记录吗？此操作不可恢复！')) {
+                    localStorage.removeItem('travelPredHistory');
+                    loadHistory();
+                }
+            } catch (e) {
+                alert('清空历史记录失败：' + e.message);
+                console.error('清空历史失败：', e);
+            }
+        });
+        
+        // 页面加载时初始化历史记录
+        $(document).ready(function() {
+            loadHistory(); // 确保DOM加载完成后执行
+        });
     </script>
+    <form id="prediction-form">
+        {% csrf_token %}
+    </form>
 </body>
 </html>

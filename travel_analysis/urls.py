@@ -41,6 +41,5 @@ urlpatterns = [
     path('visualization/', views.multi_visualization, name='visualization'),  # 多维度可视化
     path('prediction/', views.travel_prediction, name='prediction'),  # 旅行周期预测页面
     path('predict-api/', views.predict_api, name='predict_api'),  # 预测接口
-    path('data-upload/', views.data_upload, name='data_upload'),  # 数据管理（上传+预览）
     path('cost-calculator/', views.cost_calculator, name='cost_calculator'),  # 费用计算器
 ]

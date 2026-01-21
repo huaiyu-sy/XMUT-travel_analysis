@@ -8,7 +8,7 @@
         body {font-family: "Microsoft YaHei", sans-serif; background-color: #f5f7fa;}
         .container {width: 1200px; margin: 0 auto; padding: 50px 0;}
         h1 {text-align: center; color: #2c3e50; margin-bottom: 60px; font-size: 32px;}
-        .func-cards {display: flex; justify-content: space-between; flex-wrap: wrap;}
+        .func-cards {display: flex; justify-content: center; gap: 60px; flex-wrap: wrap;}
         .card {width: 280px; height: 320px; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); padding: 30px; margin-bottom: 40px; transition: all 0.3s;}
         .card:hover {transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.12);}
         .card-icon {width: 60px; height: 60px; background-color: #e3f2fd; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 25px;}
@@ -43,16 +43,6 @@
                 <h2>旅行周期预测</h2>
                 <p>输入年龄、住宿费用、交通费用3个参数，预测旅行周期及区间，并提供结果解读。</p>
                 <a href="{% url 'prediction' %}" class="card-btn">进入预测</a>
-            </div>
-
-            <!-- 数据管理 -->
-            <div class="card">
-                <div class="card-icon">
-                    <i class="fas fa-database"></i>
-                </div>
-                <h2>数据管理</h2>
-                <p>上传CSV格式的旅行数据，自动解析并导入数据库，支持数据预览和条数统计。</p>
-                <a href="{% url 'data_upload' %}" class="card-btn">上传数据</a>
             </div>
 
             <!-- 费用计算器 -->
