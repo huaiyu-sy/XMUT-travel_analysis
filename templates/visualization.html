@@ -5,17 +5,94 @@
     <title>多维度旅行数据可视化</title>
     <style>
         * {margin: 0; padding: 0; box-sizing: border-box;}
-        body {font-family: "Microsoft YaHei", sans-serif; padding: 20px;}
-        .header {margin-bottom: 30px;}
-        .header h1 {color: #2c3e50; font-size: 26px; margin-bottom: 20px;}
-        .filter-bar {display: flex; gap: 20px; align-items: center; margin-bottom: 20px;}
-        .filter-bar select, .filter-bar button {padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;}
-        .filter-bar button {background-color: #2196f3; color: white; border: none; cursor: pointer;}
-        .filter-bar button:hover {background-color: #1976d2;}
-        .dimension-tabs {display: flex; gap: 10px; margin-bottom: 20px;}
-        .dimension-tabs button {padding: 8px 16px; border: 1px solid #ddd; border-radius: 6px; background: white; cursor: pointer; font-size: 14px;}
-        .dimension-tabs button.active {background-color: #2196f3; color: white; border-color: #2196f3;}
-        #chart-container {width: 100%; height: 500px; border: 1px solid #eee; border-radius: 8px; padding: 10px;}
+        body {
+            font-family: "Microsoft YaHei", sans-serif; 
+            padding: 20px;
+            background-color: #f5f7fa;
+        }
+        .header {
+            margin-bottom: 30px;
+            background-color: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        }
+        .header h1 {
+            color: #2c3e50; 
+            font-size: 28px; 
+            margin-bottom: 25px;
+            font-weight: 600;
+        }
+        .filter-bar {
+            display: flex; 
+            gap: 25px; 
+            align-items: center; 
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+        .filter-bar select, .filter-bar button {
+            padding: 10px 15px; 
+            border: 1px solid #e0e6ed; 
+            border-radius: 8px; 
+            font-size: 14px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+        .filter-bar select {
+            min-width: 180px;
+            background-color: #f9fafc;
+        }
+        .filter-bar select:focus {
+            border-color: #2196f3;
+            box-shadow: 0 0 0 2px rgba(33,150,243,0.1);
+        }
+        .filter-bar button {
+            background-color: #2196f3; 
+            color: white; 
+            border: none; 
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .filter-bar button:hover {
+            background-color: #1976d2;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(33,150,243,0.2);
+        }
+        .dimension-tabs {
+            display: flex; 
+            gap: 12px; 
+            margin-bottom: 0;
+            flex-wrap: wrap;
+        }
+        .dimension-tabs button {
+            padding: 10px 20px; 
+            border: 1px solid #e0e6ed; 
+            border-radius: 8px; 
+            background: white; 
+            cursor: pointer; 
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .dimension-tabs button.active {
+            background-color: #2196f3; 
+            color: white; 
+            border-color: #2196f3;
+            box-shadow: 0 2px 8px rgba(33,150,243,0.2);
+        }
+        .dimension-tabs button:hover:not(.active) {
+            border-color: #2196f3;
+            color: #2196f3;
+        }
+        #chart-container {
+            width: 100%; 
+            height: 550px; 
+            background-color: white;
+            border: 1px solid #eee; 
+            border-radius: 12px; 
+            padding: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        }
     </style>
     <!-- 引入ECharts JS -->
     <script src="/static/js/echarts.min.js"></script>
@@ -27,7 +104,7 @@
         <!-- 筛选栏 -->
         <form id="filter-form" class="filter-bar">
             <div>
-                <label for="season">出行季节：</label>
+                <label for="season" style="font-weight: 500; color: #4a5568;">出行季节：</label>
                 <select id="season" name="season">
                     <option value="">全部季节</option>
                     {% for season in all_seasons %}
@@ -36,7 +113,7 @@
                 </select>
             </div>
             <div>
-                <label for="region">地域：</label>
+                <label for="region" style="font-weight: 500; color: #4a5568;">地域：</label>
                 <select id="region" name="region">
                     <option value="">全部地域</option>
                     {% for region in all_regions %}
@@ -71,6 +148,81 @@
         var seasonData = {{ season_data|safe }};
         // 3. 基础配置（从后端传递）
         var baseOption = {{ init_option|safe }};
+
+        // 核心优化：设置Y轴刻度间隔为0.5天，提升精度
+        baseOption.yAxis = Object.assign({}, baseOption.yAxis, {
+            // 固定刻度间隔为0.5
+            interval: 0.5,
+            // 优化刻度标签样式，提升可读性
+            axisLabel: {
+                fontSize: 12,
+                color: '#4a5568',
+                // 显示单位（天）
+                formatter: function(value) {
+                    return value + ' 天';
+                }
+            },
+            // 优化轴线和刻度线样式
+            axisLine: {
+                lineStyle: {
+                    color: '#e0e6ed'
+                }
+            },
+            axisTick: {
+                // 保证每个刻度都显示刻度线
+                alignWithLabel: true,
+                interval: 0,
+                lineStyle: {
+                    color: '#e0e6ed'
+                }
+            },
+            // 显示网格线，提升读数精度
+            splitLine: {
+                show: true,
+                lineStyle: {
+                    color: '#f0f2f5',
+                    type: 'dashed'
+                }
+            }
+        });
+
+        // 优化X轴样式，配合Y轴提升整体精度
+        baseOption.xAxis = Object.assign({}, baseOption.xAxis, {
+            axisLabel: {
+                fontSize: 12,
+                color: '#4a5568'
+            },
+            axisLine: {
+                lineStyle: {
+                    color: '#e0e6ed'
+                }
+            },
+            axisTick: {
+                alignWithLabel: true,
+                lineStyle: {
+                    color: '#e0e6ed'
+                }
+            }
+        });
+
+        // 优化系列配置，提升数据展示精度
+        baseOption.series = baseOption.series.map(series => ({
+            ...series,
+            itemStyle: {
+                ...series.itemStyle,
+                borderRadius: 4
+            },
+            label: {
+                show: true,
+                position: 'top',
+                fontSize: 11,
+                color: '#2c3e50',
+                // 数值保留1位小数，提升精度展示
+                formatter: function(params) {
+                    return params.value.toFixed(1) + '天';
+                }
+            }
+        }));
 
         // 4. 渲染指定维度的图表
         function renderChart(dimension) {
@@ -107,9 +259,15 @@
             var region = $('#region').val();
             // 跳转并携带筛选参数
             var url = "{% url 'visualization' %}?";
-            if (season) url += "season=" + season + "&";
-            if (region) url += "region=" + region + "&";
-            window.location.href = url.slice(0, -1); // 移除最后一个&
+            var params = [];
+            if (season) params.push("season=" + season);
+            if (region) params.push("region=" + region);
+            if (params.length > 0) {
+                url += params.join("&");
+            } else {
+                url = "{% url 'visualization' %}";
+            }
+            window.location.href = url;
         });
 
         // 8. 窗口大小变化时自适应
